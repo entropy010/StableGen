@@ -1,4 +1,5 @@
 
+<<<<<<< HEAD
 
 
 
@@ -2437,3 +2438,5 @@ Replace <code>&lt;YourComfyUIDirectory&gt;</code> with the actual path. If omitt
   </body>
 </html>
 
+=======
+>>>>>>> 2a8092ac0bc3b1aa0181697f44f82ec7619c1569
