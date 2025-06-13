@@ -291,7 +291,7 @@ class ControlNetUnit(bpy.types.PropertyGroup):
         items=lambda self, context: get_controlnet_models(context, self.unit_type),
         update=update_controlnet
     ) # type: ignore
-    cam_background: bpy.props.BoolProperty(
+    camera_background: bpy.props.BoolProperty(
         name="Use Camera Background",
         description="Camera background projection",
         default=False,
@@ -447,6 +447,7 @@ class AddControlNetUnit(bpy.types.Operator):
         new_unit.strength = 0.5
         new_unit.start_percent = 0.0
         new_unit.end_percent = 1.0
+        new_unit.camera_background = False
         if "union" in new_unit.model_name.lower() or "promax" in new_unit.model_name.lower():
             new_unit.is_union = True
         context.scene.controlnet_units_index = len(units) - 1

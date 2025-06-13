@@ -381,8 +381,73 @@ def export_tile(context, camera_id=None):
     # Render the scene
     export_render(context, camera_id)
 
-    # Save original settings
+    # Scene definition
     scene = bpy.context.scene
+    camera = scene.camera
+    render_width = scene.render.resolution_x
+    render_height = scene.render.resolution_y
+
+    for bg in scene.camera.data.background_images:
+        # Set up nodes
+        scene.use_nodes = True
+        tree = scene.node_tree
+        tree.nodes.clear()
+
+        # Enable transparent background (to allow alpha compositing)
+        scene.render.film_transparent = True
+
+        # Add Render Layers node
+        render_layers = tree.nodes.new(type='CompositorNodeRLayers')
+        render_layers.location = (0, 0)
+
+        # Add Image node (load your background PNG)
+        bg_image = tree.nodes.new(type='CompositorNodeImage')
+        bg_image.location = (0, 0)
+
+        # Update the background image on the current frame
+        bg.image_user.use_auto_refresh = True
+        bg.image_user.frame_current
+
+        # load current camera background image
+        bg_image.image = bg.image
+
+        # Add Scale node — set to 'RENDER_SIZE' mode
+        scale_node = tree.nodes.new(type='CompositorNodeScale')
+        scale_node.location = (0, 0)
+        scale_node.space = 'RENDER_SIZE'  # Ensures the image is scaled to match render size
+
+        # Add Transform node — for offset
+        transform_node = tree.nodes.new(type='CompositorNodeTransform')
+        transform_node.inputs['Scale'].default_value = bg.scale
+        offset_x_px = int(bg.offset.x * render_width)
+        offset_y_px = int(bg.offset.y * render_height)
+        transform_node.inputs['X'].default_value = offset_x_px
+        transform_node.inputs['Y'].default_value = offset_y_px
+        transform_node.inputs['Angle'].default_value = -1*bg.rotation
+
+        # Add Alpha Over node
+        alpha_over = tree.nodes.new(type='CompositorNodeAlphaOver')
+        alpha_over.location = (0, 0)
+
+        # Add Composite node
+        composite = tree.nodes.new(type='CompositorNodeComposite')
+        composite.location = (0, 0)
+
+        # Link nodes
+        links = tree.links
+        links.new(render_layers.outputs['Image'], alpha_over.inputs[1])     # Foreground
+        links.new(bg_image.outputs['Image'], scale_node.inputs['Image'])    # Background
+        links.new(scale_node.outputs['Image'], transform_node.inputs['Image'])    # Background
+        links.new(alpha_over.outputs['Image'], composite.inputs['Image'])
+        links.new(transform_node.outputs['Image'], alpha_over.inputs[2])
+        #links.new(render_layers.outputs['Alpha'], alpha_over.inputs['Fac'])
+
+        viewer = tree.nodes.new(type='CompositorNodeViewer')
+        viewer.location = (0, 0)
+        links.new(alpha_over.outputs['Image'], viewer.inputs['Image'])
+
+        # insert CameraBG ----------------------------------
+
     original_engine = scene.render.engine
     original_view_transform = scene.view_settings.view_transform
     original_shading_type = bpy.context.space_data.shading.type if bpy.context.area.type == 'VIEW_3D' else None
@@ -420,6 +485,7 @@ def export_tile(context, camera_id=None):
     image_normalized = cv2.normalize(image_color, None, 0, 255, cv2.NORM_MINMAX)
     cv2.imwrite(os.path.join(output_dir_tile, f"{output_file}.png"), image_normalized)
 
+    #bg_image.image.gl_free(frame=bg_image.image_user.frame_current)
 
 def export_canny(context, camera_id=None, low_threshold=0, high_threshold=80):
     """
@@ -432,6 +498,59 @@ def export_canny(context, camera_id=None, low_threshold=0, high_threshold=80):
     """
     # Render the scene
     export_render(context, camera_id)
+
+
+    # insert CameraBG ----------------------------------
+
+    # Save original settings
+    scene = bpy.context.scene
+    # Enable transparent background (to allow alpha compositing)
+    scene.render.film_transparent = True
+
+    # Set up nodes
+    bpy.context.scene.use_nodes = True
+    tree = bpy.context.scene.node_tree
+    tree.nodes.clear()
+
+    # Add Render Layers node
+    render_layers = tree.nodes.new(type='CompositorNodeRLayers')
+
+    # Add Image node (load your background PNG)
+    bg_image = tree.nodes.new(type='CompositorNodeImage')
+    bg_image.image = bpy.data.images.load("C:/tmp/cam_bg.png")  # Replace with your path
+
+    # Add Alpha Over node
+    alpha_over = tree.nodes.new(type='CompositorNodeAlphaOver')
+    #alpha_over.inputs[1].default_value = [0, 0, 0, 0]  # Background color (optional)
+
+    # Add Composite node
+    composite = tree.nodes.new(type='CompositorNodeComposite')
+
+    # Position nodes
+    render_layers.location = (0, 0)
+    bg_image.location = (0, 0)
+    alpha_over.location = (0, 0)
+    composite.location = (0, 0)
+
+    # Add Scale node
+    scale_node = tree.nodes.new(type='CompositorNodeScale')
+    scale_node.space = 'RENDER_SIZE'  # Ensures the image is scaled to match render size
+    scale_node.location = (0, 0)
+
+    # Link nodes
+    links = tree.links
+    links.new(render_layers.outputs['Image'], alpha_over.inputs[1])     # Foreground
+    links.new(bg_image.outputs['Image'], scale_node.inputs['Image'])    # Background
+    links.new(alpha_over.outputs['Image'], composite.inputs['Image'])
+    links.new(scale_node.outputs['Image'], alpha_over.inputs[2])
+    #links.new(render_layers.outputs['Alpha'], alpha_over.inputs['Fac'])
+
+    # Optional: Add a viewer node to preview result
+    viewer = tree.nodes.new(type='CompositorNodeViewer')
+    viewer.location = (0, 0)
+    links.new(alpha_over.outputs['Image'], viewer.inputs['Image'])
+
+    # insert CameraBG ----------------------------------
 
     # Load the rendered image
     output_dir_render = get_dir_path(context, "misc")

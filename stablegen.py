@@ -63,6 +63,7 @@ GEN_PARAMETERS = [
     "grow_mask_by",
     "canny_threshold_low",
     "canny_threshold_high",
+    "camera_background",
 ]
 
 def get_preset_items(self, context):
@@ -94,6 +95,7 @@ def update_parameters(self, context):
                     unit_data = {
                         "unit_type": unit.unit_type,
                         "model_name": unit.model_name,
+                        "camera_background": unit.camera_background,
                         "strength": unit.strength,
                         "start_percent": unit.start_percent,
                         "end_percent": unit.end_percent,
@@ -548,22 +550,28 @@ class StableGenPanel(bpy.types.Panel):
                         split = sub_unit_box.split(factor=0.2, align=True) 
                     split.label(text="Model:")
                     split.prop(unit, "model_name", text="")
-                    
                     row = sub_unit_box.row()
+
+                    row.prop(unit, "camera_background", text="Use Camera Background", toggle=False, icon="CAMERA_DATA")
+                    if width_mode == 'narrow':
+                        row = sub_unit_box.row()
+
                     row.prop(unit, "strength", text="Strength")
                     if width_mode == 'narrow':
                         row = sub_unit_box.row()
+
                     row.prop(unit, "start_percent", text="Start")
+                    row.prop(unit, "end_percent", text="End")
                     if width_mode == 'narrow':
                         row = sub_unit_box.row()
-                    row.prop(unit, "end_percent", text="End")
                     
                     if unit.unit_type == 'canny':
                         row = sub_unit_box.row()
                         row.prop(scene, "canny_threshold_low", text="Canny Low")
+                        row.prop(scene, "canny_threshold_high", text="Canny High")
                         if width_mode == 'narrow':
                             row = sub_unit_box.row()
-                        row.prop(scene, "canny_threshold_high", text="Canny High")
+                            
                     if hasattr(unit, 'is_union') and unit.is_union: 
                         row = sub_unit_box.row()
                         row.prop(unit, "use_union_type", text="Set Union Type", toggle=True, icon="MOD_BOOLEAN")
@@ -925,6 +933,7 @@ class SavePreset(bpy.types.Operator):
                     "strength": unit.strength,
                     "start_percent": unit.start_percent,
                     "end_percent": unit.end_percent,
+                    "camera_background": unit.camera_background,
                     "is_union": unit.is_union,
                     "use_union_type": unit.use_union_type
                 }
