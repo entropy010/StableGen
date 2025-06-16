@@ -552,9 +552,10 @@ class StableGenPanel(bpy.types.Panel):
                     split.prop(unit, "model_name", text="")
                     row = sub_unit_box.row()
 
-                    row.prop(unit, "camera_background", text="Use Camera Background", toggle=False, icon="CAMERA_DATA")
-                    if width_mode == 'narrow':
-                        row = sub_unit_box.row()
+                    if unit.unit_type == 'tile' or unit.unit_type == 'canny':
+                        row.prop(unit, "camera_background", text="Use Camera Background", toggle=False, icon="CHECKBOX_HLT")
+                        if width_mode == 'narrow':
+                            row = sub_unit_box.row()
 
                     row.prop(unit, "strength", text="Strength")
                     if width_mode == 'narrow':

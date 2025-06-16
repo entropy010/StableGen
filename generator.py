@@ -384,39 +384,50 @@ class ComfyUIGenerate(bpy.types.Operator):
 
         if not context.scene.project_only:
             # If there is depth controlnet unit
-            if any(unit["unit_type"] == "depth" for unit in controlnet_units):
+            depth_unit = next((unit for unit in controlnet_units if unit["unit_type"] == "depth"), None)
+            if depth_unit:
+                bg_status = depth_unit.get("camera_background", True)
                 if context.scene.generation_method != 'uv_inpaint':
                     # Export depth maps for each camera
                     for i, camera in enumerate(self._cameras):
                         bpy.context.scene.camera = camera
-                        self.export_depthmap(context, camera_id=i)
+                        self.export_depthmap(context, camera_id=i, bg_status=bg_status)
                     if context.scene.generation_method == 'grid':
                         self.combine_maps(context, self._cameras, type="depth")
+
             # If there is canny controlnet unit
-            if any(unit["unit_type"] == "canny" for unit in controlnet_units):
+            canny_unit = next((unit for unit in controlnet_units if unit["unit_type"] == "canny"), None)
+            if canny_unit:
+                bg_status = canny_unit.get("camera_background", True)
                 if context.scene.generation_method != 'uv_inpaint':
                     # Export canny maps for each camera
                     for i, camera in enumerate(self._cameras):
                         bpy.context.scene.camera = camera
-                        export_canny(context, camera_id=i, low_threshold=context.scene.canny_threshold_low, high_threshold=context.scene.canny_threshold_high)
+                        export_canny(context, camera_id=i, low_threshold=context.scene.canny_threshold_low, high_threshold=context.scene.canny_threshold_high, bg_status=bg_status)
                     if context.scene.generation_method == 'grid':
                         self.combine_maps(context, self._cameras, type="canny")
+
             # If there is normal controlnet unit
-            if any(unit["unit_type"] == "normal" for unit in controlnet_units):
+            normal_unit = next((unit for unit in controlnet_units if unit["unit_type"] == "normal"), None)
+            if normal_unit:
+                bg_status = normal_unit.get("camera_background", True)
                 if context.scene.generation_method != 'uv_inpaint':
                     # Export normal maps for each camera
                     for i, camera in enumerate(self._cameras):
                         bpy.context.scene.camera = camera
-                        self.export_normal(context, camera_id=i)
+                        self.export_normal(context, camera_id=i, bg_status=bg_status)
                     if context.scene.generation_method == 'grid':
                         self.combine_maps(context, self._cameras, type="normal")
+
             # If there is tile controlnet unit
-            if any(unit["unit_type"] == "tile" for unit in controlnet_units):
+            tile_unit = next((unit for unit in controlnet_units if unit["unit_type"] == "tile"), None)
+            if tile_unit:
+                bg_status = tile_unit.get("camera_background", True)
                 if context.scene.generation_method != 'uv_inpaint':
                     # Export tile maps for each camera
                     for i, camera in enumerate(self._cameras):
                         bpy.context.scene.camera = camera
-                        export_tile(context, camera_id=i)          #export_tile(context, camera_id=i)
+                        export_tile(context, camera_id=i, bg_status=bg_status)
                     if context.scene.generation_method == 'grid':
                         self.combine_maps(context, self._cameras, type="tile")
 
@@ -1582,7 +1593,7 @@ class ComfyUIGenerate(bpy.types.Operator):
 
 
 
-    def export_depthmap(self, context, camera_id=None):
+    def export_depthmap(self, context, camera_id=None, bg_status=None):
         """     
         Exports the depth map of the scene.         
         :param context: Blender context.         
@@ -1590,6 +1601,7 @@ class ComfyUIGenerate(bpy.types.Operator):
         :return: None     
         """
         print("Exporting depth map")
+
         # Save original settings to restore later.
         original_engine = bpy.context.scene.render.engine
         original_view_transform = bpy.context.scene.view_settings.view_transform
@@ -1666,7 +1678,7 @@ class ComfyUIGenerate(bpy.types.Operator):
         bpy.context.scene.render.film_transparent = original_film_transparent
         view_layer.use_pass_z = original_pass_z
 
-    def export_normal(self, context, camera_id=None):
+    def export_normal(self, context, camera_id=None, bg_status=False):
         """
         Exports the normal map of the scene.
         Areas without geometry will show the neutral color (0.5, 0.5, 1.0).
@@ -1674,6 +1686,13 @@ class ComfyUIGenerate(bpy.types.Operator):
         :param camera_id: ID of the camera.
         :return: None
         """
+        if bg_status:
+            # Render with background
+            with open("C:/tmp/output.txt", "a") as f:print("Normal:True", file=f)
+        else:
+            # Render without background
+            with open("C:/tmp/output.txt", "a") as f:print("Normal:False", file=f)
+
         print("Exporting normal map")
         bpy.context.scene.frame_set(1)
         output_dir = get_dir_path(context, "controlnet")["normal"]

@@ -293,7 +293,7 @@ class ControlNetUnit(bpy.types.PropertyGroup):
     ) # type: ignore
     camera_background: bpy.props.BoolProperty(
         name="Use Camera Background",
-        description="Camera background projection",
+        description="Camera background projection for ControlNet Canny and Tile",
         default=False,
         update=update_parameters
     )  # type: ignore
